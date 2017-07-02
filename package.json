@@ -1,0 +1,19 @@
+{
+  "name": "prism-server",
+  "version": "1.0.0",
+  "description": "Back-end for Prism errata",
+  "main": "app.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://darthspectrum@bitbucket.org/praddicts/prism-server.git"
+  },
+  "author": "Darth Spectrum",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/praddicts/prism-server#readme",
+  "dependencies": {
+    "express": "^4.14.0"
+  },
+  "scripts": {
+    "build": "webpack"
+  },
+}
