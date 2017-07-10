@@ -2,7 +2,6 @@ var fs = require('fs');
 var https = require('https');
 var express = require('express');
 var mongodb = require('mongodb');
-var assert = require('assert');
 var bodyParser = require('body-parser');
 
 var prismDB;
@@ -11,10 +10,33 @@ var prismDB;
 var app = express();
 app.use(bodyParser.json());
 
-app.post('/facet', function(req, res) {
+app.post('/facet', function(req, response) {
   prismDB.collection('facets').insert(req.body, function(err, res) {
     console.log(err == null ? res : err);
+    if (err != null)
+      response.send('YEAH');
   });
+});
+
+app.get('/prism', function(req, response) {
+  console.log('Fetching all prisms for ' + req.query.URLs);
+  var crit = JSON.parse(req.query.URLs);
+
+  if (Array.isArray(crit)) {
+    prismDB.collection('prisms').find({ url: { $in: crit } }).toArray(
+      function(err, results) {
+        console.log(results);
+        console.log(err);
+        response.send(results);
+      });
+  } else {
+    prismDB.collection('prisms').find({ url: crit }).toArray(
+      function(err, results) {
+        console.log(results);
+        console.log(err);
+        response.send(results);
+      });
+  }
 });
 
 // HTTPS server
@@ -33,7 +55,7 @@ var MongoClient = mongodb.MongoClient;
 
 MongoClient.connect(mongoURL, function(err, db) {
   if (err == null) {
-    console.log('Connected to mongodb...');
+    console.log('Connected to MongoDB...');
     prismDB = db;
   }
 });
