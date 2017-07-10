@@ -7,12 +7,12 @@ var bodyParser = require('body-parser');
 var prismDB;
 
 // Express
-var app = express();
+const app = express();
 app.use(bodyParser.json());
 
 app.post('/facet', function(req, response) {
   prismDB.collection('facets').insert(req.body, function(err, res) {
-    console.log(err == null ? res : err);
+    console.log(err === null ? res : err);
     if (err != null)
       response.send('YEAH');
   });
@@ -20,7 +20,7 @@ app.post('/facet', function(req, response) {
 
 app.get('/prism', function(req, response) {
   console.log('Fetching all prisms for ' + req.query.URLs);
-  var crit = JSON.parse(req.query.URLs);
+  const crit = JSON.parse(req.query.URLs);
 
   if (Array.isArray(crit)) {
     prismDB.collection('prisms').find({ url: { $in: crit } }).toArray(
@@ -40,21 +40,21 @@ app.get('/prism', function(req, response) {
 });
 
 // HTTPS server
-var privateKey = fs.readFileSync('key.pem', 'utf8');
-var certificate = fs.readFileSync('cert.pem', 'utf8');
-var credentials = { key: privateKey, cert: certificate };
-var httpsServer = https.createServer(credentials, app);
+const privateKey = fs.readFileSync('key.pem', 'utf8');
+const certificate = fs.readFileSync('cert.pem', 'utf8');
+const credentials = { key: privateKey, cert: certificate };
+const httpsServer = https.createServer(credentials, app);
 
 httpsServer.listen(11111, function() {
   console.log('Started Prism HTTPS server on 11111');
 });
 
 //MongoDB
-var mongoURL = 'mongodb://localhost:27017/prism';
-var MongoClient = mongodb.MongoClient;
+const mongoURL = 'mongodb://localhost:27017/prism';
+const MongoClient = mongodb.MongoClient;
 
 MongoClient.connect(mongoURL, function(err, db) {
-  if (err == null) {
+  if (err === null) {
     console.log('Connected to MongoDB...');
     prismDB = db;
   }
