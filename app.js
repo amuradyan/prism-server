@@ -1,8 +1,8 @@
-var fs = require('fs');
-var https = require('https');
-var express = require('express');
-var mongodb = require('mongodb');
-var bodyParser = require('body-parser');
+const fs = require('fs');
+const https = require('https');
+const express = require('express');
+const mongodb = require('mongodb');
+const bodyParser = require('body-parser');
 
 var prismDB;
 
@@ -10,34 +10,43 @@ var prismDB;
 const app = express();
 app.use(bodyParser.json());
 
-app.post('/facet', function(req, response) {
-  prismDB.collection('facets').insert(req.body, function(err, res) {
-    console.log(err === null ? res : err);
-    if (err != null)
-      response.send('YEAH');
+app.route('/prism')
+  .get(function(req, response) {
+    console.log('Fetching all prisms for ' + req.query.URLs);
+    const crit = JSON.parse(req.query.URLs);
+
+    if (Array.isArray(crit)) {
+      prismDB.collection('prisms').find({ url: { $in: crit } }).toArray(
+        function(err, results) {
+          console.log(results);
+          console.log(err);
+          response.send(results);
+        });
+    } else {
+      prismDB.collection('prisms').find({ url: crit }).toArray(
+        function(err, results) {
+          console.log(results);
+          console.log(err);
+          response.send(results);
+        });
+    }
+  })
+  .put(function(req, response) {
+    const prism = req.body;
+    console.log(prism);
+    prismDB.collection('prisms')
+      .update({ url: prism.url }, {
+        // $addToSet: {
+        //   facets: { $each: prism.facets },
+        //   topics: { $each: prism.topics }
+        // },
+        $set: {
+          facets: prism.facets,
+          topics: prism.topics,
+          creationDate: prism.creationDate
+        }
+      }, { upsert: true });
   });
-});
-
-app.get('/prism', function(req, response) {
-  console.log('Fetching all prisms for ' + req.query.URLs);
-  const crit = JSON.parse(req.query.URLs);
-
-  if (Array.isArray(crit)) {
-    prismDB.collection('prisms').find({ url: { $in: crit } }).toArray(
-      function(err, results) {
-        console.log(results);
-        console.log(err);
-        response.send(results);
-      });
-  } else {
-    prismDB.collection('prisms').find({ url: crit }).toArray(
-      function(err, results) {
-        console.log(results);
-        console.log(err);
-        response.send(results);
-      });
-  }
-});
 
 // HTTPS server
 const privateKey = fs.readFileSync('key.pem', 'utf8');
@@ -59,3 +68,12 @@ MongoClient.connect(mongoURL, function(err, db) {
     prismDB = db;
   }
 });
+
+// Used for tests via Postman, since I can't find a
+// way to import the SSL certificate into it/chrome
+// var http = require('http');
+// const httpServer = http.createServer(app);
+
+// httpServer.listen(1111, function() {
+//   console.log('Started Prism HTTP server on 1111');
+// });
