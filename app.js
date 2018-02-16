@@ -3,6 +3,25 @@ const https = require('https');
 const express = require('express');
 const mongodb = require('mongodb');
 const bodyParser = require('body-parser');
+const base64url = require('base64url');
+const jwt = require('jsonwebtoken');
+
+const secretStore = {
+  amanda: 'Chancellor Palpatine is Darth Sidious'
+};
+
+const header = {
+  typ: 'JWT',
+  kid: 'amanda',
+  alg: 'HS512'
+};
+
+const options = { 
+  header: header, 
+  expiresIn: '1h'
+};
+
+// const verified = jwt.verify(signedToken, secretStore['amanda'], { algorithms: 'HS512' });
 
 var prismDB;
 
@@ -11,14 +30,18 @@ const app = express();
 app.use(bodyParser.json());
 
 // User router
-const userRouter = express.Router({ mergeParams: true });
+const userRouter = express.Router();
 
 userRouter.route('/users')
   .post(function (req, response) {
     const userSpec = req.body;
     console.log('Registering a user');
     console.log(userSpec);
-    response.send('Registration success!');
+    var pUser = prismDB.collection('users').insert(userSpec, { fullResult: true });
+    pUser.then(function (value) {
+      console.log(value);
+      response.send(value);
+    });
   });
 
 userRouter.route('/users/:userId')
@@ -43,8 +66,8 @@ const prismRouter = express.Router({ mergeParams: true });
 prismRouter.route('/prisms')
   .get(function (req, response) {
     const URLs = null;
-    if(req.query.URLs)
-       URLs = JSON.parse(req.query.URLs);
+    if (req.query.URLs)
+      URLs = JSON.parse(req.query.URLs);
 
     if (Array.isArray(URLs)) {
       console.log('Fetching prisms for user ' + req.params.userId + ' for URLs ' + req.query.URLs);
@@ -94,15 +117,50 @@ prismRouter.route('/prisms')
   });
 
 // Token router
-const tokenRouter = express.Router({ mergeParams: true });
+const tokenRouter = express.Router();
 
 tokenRouter.route('/tokens')
   .post(function (req, response) {
     const credentials = req.body;
-    console.log('login');
-    console.log(credentials);
-    response.send('login success');
+    console.log('loging in user with credentials : ', credentials);
+    prismDB.collection('users').findOne({
+        handle: credentials.handle,
+        regPasswordHash: credentials.passwordHash
+      }, function(err, doc){
+        if(!err){
+          const payload = {
+            iat: Date.now(),
+            uid: doc['_id']
+          };
+                    
+          const signedToken = jwt.sign(payload, secretStore['amanda'], options);
+          
+          response.send({
+              msg: "Success",
+              pld: doc,
+              tkn: signedToken
+            });
+        } else {
+          res.send({
+            msg: "Failure"
+          });
+        }
+      });
   });
+
+// Handle router
+const handleRouter = express.Router()
+
+handleRouter.route('/handle/:handle')
+  .get(function (req, response) {
+    console.log('checking for handle availability');
+  });
+
+
+userRouter.use('/users/:userId', prismRouter);
+app.use('', userRouter);
+app.use('', tokenRouter);
+app.use('', handleRouter);
 
 // HTTPS server
 const privateKey = fs.readFileSync('key.pem', 'utf8');
@@ -113,10 +171,6 @@ const httpsServer = https.createServer(credentials, app);
 httpsServer.listen(11111, function () {
   console.log('Started Prism HTTPS server on 11111');
 });
-
-userRouter.use('/users/:userId', prismRouter);
-app.use('', userRouter);
-app.use('', tokenRouter);
 
 //MongoDB
 const mongoURL = 'mongodb://localhost:27017/prism';

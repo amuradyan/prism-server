@@ -13,7 +13,9 @@
   "dependencies": {
     "body-parser": "^1.17.2",
     "express": "^4.14.0",
-    "mongodb": "^2.2.29"
+    "mongodb": "^2.2.29",
+    "jsonwebtoken": "*",
+    "base64url": "*"
   },
   "scripts": {
     "build": "webpack"
