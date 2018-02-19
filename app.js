@@ -5,6 +5,7 @@ const mongodb = require('mongodb');
 const bodyParser = require('body-parser');
 const base64url = require('base64url');
 const jwt = require('jsonwebtoken');
+const debug = require('debug')('prism-server');
 
 const secretStore = {
   amanda: 'Chancellor Palpatine is Darth Sidious'
@@ -35,11 +36,10 @@ const userRouter = express.Router();
 userRouter.route('/users')
   .post(function (req, response) {
     const userSpec = req.body;
-    console.log('Registering a user');
-    console.log(userSpec);
+    debug('Registering a user', userSpec);
     var pUser = prismDB.collection('users').insert(userSpec, { fullResult: true });
     pUser.then(function (value) {
-      console.log(value);
+      debug(value);
       response.send(value);
     });
   });
@@ -47,16 +47,16 @@ userRouter.route('/users')
 userRouter.route('/users/:userId')
   .get(function (req, response) {
     const userSpec = req.body;
-    console.log('Fetching a user with ID : ' + req.params.userId);
-    console.log(userSpec);
+    debug('Fetching a user with ID : ' + req.params.userId);
+    debug(userSpec);
     response.send('Fetching a user with ID : ' + req.params.userId);
   });
 
 userRouter.route('/users/:userId')
   .delete(function (req, response) {
     const userSpec = req.body;
-    console.log('Deleting user with ID : ' + req.params.userId);
-    console.log(userSpec);
+    debug('Deleting user with ID : ' + req.params.userId);
+    debug(userSpec);
     response.send('Removed user with ID : ' + req.params.userId);
   });
 
@@ -70,19 +70,19 @@ prismRouter.route('/prisms')
       URLs = JSON.parse(req.query.URLs);
 
     if (Array.isArray(URLs)) {
-      console.log('Fetching prisms for user ' + req.params.userId + ' for URLs ' + req.query.URLs);
+      debug('Fetching prisms for user ' + req.params.userId + ' for URLs ' + req.query.URLs);
       prismDB.collection('prisms').find({ url: { $in: URLs } }).toArray(
         function (err, results) {
-          console.log(results);
-          console.log(err);
+          debug(results);
+          debug(err);
           response.send(results);
         });
     } else {
-      console.log('Fetching all prisms for user ' + req.params.userId);
+      debug('Fetching all prisms for user ' + req.params.userId);
       prismDB.collection('prisms').find({ url: URLs }).toArray(
         function (err, results) {
-          console.log(results);
-          console.log(err);
+          debug(results);
+          debug(err);
           response.send(results);
         });
     }
@@ -91,7 +91,7 @@ prismRouter.route('/prisms')
 prismRouter.route('/prisms')
   .put(function (req, response) {
     const prism = req.body;
-    console.log(prism);
+    debug(prism);
     prismDB.collection('prisms')
       .update({ url: prism.url }, {
         // $addToSet: {
@@ -108,12 +108,12 @@ prismRouter.route('/prisms')
 
 prismRouter.route('/prisms/:prismId')
   .delete(function (req, response) {
-    console.log('deleting prism with ID: ' + req.params.prismId);
+    debug('deleting prism with ID: ' + req.params.prismId);
   });
 
 prismRouter.route('/prisms')
   .delete(function (req, response) {
-    console.log('deleting prism all prisms for user : ' + req.params.userId);
+    debug('deleting prism all prisms for user : ' + req.params.userId);
   });
 
 // Token router
@@ -122,7 +122,7 @@ const tokenRouter = express.Router();
 tokenRouter.route('/tokens')
   .post(function (req, response) {
     const credentials = req.body;
-    console.log('loging in user with credentials : ', credentials);
+    debug('loging in user with credentials : ', credentials);
     prismDB.collection('users').findOne({
         handle: credentials.handle,
         regPasswordHash: credentials.passwordHash
@@ -130,7 +130,7 @@ tokenRouter.route('/tokens')
         if(!err){
           const payload = {
             iat: Date.now(),
-            uid: doc['_id']
+            sub: doc['_id']
           };
                     
           const signedToken = jwt.sign(payload, secretStore['amanda'], options);
@@ -153,7 +153,7 @@ const handleRouter = express.Router()
 
 handleRouter.route('/handle/:handle')
   .get(function (req, response) {
-    console.log('checking for handle availability');
+    debug('checking for handle availability');
   });
 
 
@@ -169,7 +169,7 @@ const credentials = { key: privateKey, cert: certificate };
 const httpsServer = https.createServer(credentials, app);
 
 httpsServer.listen(11111, function () {
-  console.log('Started Prism HTTPS server on 11111');
+  debug('Started Prism HTTPS server on 11111');
 });
 
 //MongoDB
@@ -178,7 +178,7 @@ const MongoClient = mongodb.MongoClient;
 
 MongoClient.connect(mongoURL, function (err, db) {
   if (err === null) {
-    console.log('Connected to MongoDB...');
+    debug('Connected to MongoDB...');
     prismDB = db;
   }
 });
