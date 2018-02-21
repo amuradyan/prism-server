@@ -1,5 +1,6 @@
 const fs = require('fs');
 const https = require('https');
+const http = require('http');
 const express = require('express');
 const mongodb = require('mongodb');
 const bodyParser = require('body-parser');
@@ -24,7 +25,7 @@ const options = {
 
 // const verified = jwt.verify(signedToken, secretStore['amanda'], { algorithms: 'HS512' });
 
-var prismDB;
+let prismDB;
 
 // Express
 const app = express();
@@ -65,13 +66,13 @@ const prismRouter = express.Router({ mergeParams: true });
 
 prismRouter.route('/prisms')
   .get(function (req, response) {
-    const URLs = null;
+    let URLs = null;
     if (req.query.URLs)
       URLs = JSON.parse(req.query.URLs);
 
     if (Array.isArray(URLs)) {
       debug('Fetching prisms for user ' + req.params.userId + ' for URLs ' + req.query.URLs);
-      prismDB.collection('prisms').find({ url: { $in: URLs } }).toArray(
+      prismDB.collection('prisms').find({ url: { $in: URLs },  }).toArray(
         function (err, results) {
           debug(results);
           debug(err);
@@ -127,21 +128,24 @@ tokenRouter.route('/tokens')
         handle: credentials.handle,
         regPasswordHash: credentials.passwordHash
       }, function(err, doc){
-        if(!err){
-          const payload = {
-            iat: Date.now(),
-            sub: doc['_id']
-          };
-                    
-          const signedToken = jwt.sign(payload, secretStore['amanda'], options);
-          
-          response.send({
-              msg: "Success",
-              pld: doc,
-              tkn: signedToken
-            });
+        if(!err && doc){
+            // FIXME: Dirty removal of user password hash field from Mongo doc
+            delete doc.regPasswordHash;
+            
+            const payload = {
+              iat: Date.now(),
+              sub: doc['_id']
+            };
+                      
+            const signedToken = jwt.sign(payload, secretStore['amanda'], options);
+            
+            response.send({
+                msg: "Success",
+                pld: doc,
+                tkn: signedToken
+              });
         } else {
-          res.send({
+          response.send({
             msg: "Failure"
           });
         }
@@ -168,8 +172,12 @@ const certificate = fs.readFileSync('cert.pem', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 const httpsServer = https.createServer(credentials, app);
 
-httpsServer.listen(11111, function () {
-  debug('Started Prism HTTPS server on 11111');
+// httpsServer.listen(11111, function () {
+//   debug('Started Prism HTTPS server on 11111');
+// });
+
+const httpServer = http.createServer(app).listen(1111, function(){
+  debug('Started Prism HTTP server on 1111');
 });
 
 //MongoDB
