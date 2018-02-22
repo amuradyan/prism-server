@@ -95,14 +95,11 @@ prismRouter.route('/prisms')
     debug(prism);
     prismDB.collection('prisms')
       .update({ url: prism.url }, {
-        // $addToSet: {
-        //   facets: { $each: prism.facets },
-        //   topics: { $each: prism.topics }
-        // },
         $set: {
           facets: prism.facets,
           topics: prism.topics,
-          creationDate: prism.creationDate
+          creationDate: prism.creationDate,
+          authorId: prism.authorId
         }
       }, { upsert: true });
   });
